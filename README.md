@@ -1,79 +1,73 @@
-# heics-extract-wasm
+# React + TypeScript + Vite
 
-Build a minimal `ffmpeg.wasm` focused on:
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-- input: `.heics` (HEIF/ISOBMFF via `mov` demuxer)
-- decode: `hevc` main track + `hevc` rext (aux/alpha) track
-- filters: `alphamerge` (+ minimal GIF palette filters)
-- output: PNG sequence or transparent GIF
+Currently, two official plugins are available:
 
-## Prerequisites
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-- FFmpeg source checkout at `./FFmpeg` (expects `FFmpeg/configure` to exist and be executable)
-- Emscripten toolchain in `PATH` (`emcc`, `emar`, `emranlib`, `emnm`, ...)
+## React Compiler
 
-## Build
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-./scripts/build-ffmpeg-wasm-heics.sh
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-### Optional build switches
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-- `THREADS=0|1` (default: `0`)
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-  - `0`: build without WebAssembly pthreads (easier to integrate, fewer runtime constraints)
-  - `1`: build with pthreads (requires cross-origin isolation in browsers; see script comments)
-
-- `SIMD=0|1` (default: `1`)
-
-  - `1`: enable wasm SIMD (`-msimd128`)
-  - `0`: disable SIMD for wider compatibility
-
-Examples:
-
-```bash
-# Default (single-thread, SIMD on)
-./scripts/build-ffmpeg-wasm-heics.sh
-
-# Disable SIMD (compat mode)
-SIMD=0 ./scripts/build-ffmpeg-wasm-heics.sh
-
-# Enable threads (pthreads build)
-THREADS=1 ./scripts/build-ffmpeg-wasm-heics.sh
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-## Artifacts
-
-Build outputs are written to:
-
-- `dist/ffmpeg.js`
-- `dist/ffmpeg.wasm`
-
-## ffmpeg command examples (reference)
-
-These commands describe the intended filtergraph and stream mapping for typical HEICS inputs.
-
-### HEICS -> PNG sequence (RGBA)
-
-```bash
-ffmpeg -i input.heics \
-  -filter_complex "[0:2][0:3]alphamerge,format=rgba[v]" \
-  -map "[v]" \
-  out_%03d.png
-```
-
-### HEICS -> transparent GIF
-
-```bash
-ffmpeg -i input.heics \
-  -filter_complex "[0:2][0:3]alphamerge,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse[v]" \
-  -map "[v]" \
-  -loop 0 \
-  out.gif
-```
-
-## Notes
-
-- HEICS files often include a 1-fps poster stream; for iMessage stickers the animated color+alpha tracks are commonly stream `0:2` (Main) and `0:3` (Rext/alpha). Use `ffprobe -hide_banner input.heics` to confirm.
-- The build is intentionally minimal (`--disable-everything`) and only enables the components required for HEICS (HEVC-in-MOV) decode, alpha merge, and PNG/GIF output.
