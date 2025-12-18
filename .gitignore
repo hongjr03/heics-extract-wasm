@@ -1,0 +1,8 @@
+build/
+dist/
+web/ffmpeg.js
+web/ffmpeg.wasm
+web/.cache/
+web/.tmp/
+.DS_Store
+.clice
