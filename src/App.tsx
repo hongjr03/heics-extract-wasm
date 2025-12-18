@@ -306,7 +306,7 @@ function App() {
   const format = formatInfo[outputFormat];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 font-sans selection:bg-primary/20">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-2 sm:p-4 font-sans selection:bg-primary/20">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
 
       {/* Full-screen drop zone */}
@@ -315,32 +315,32 @@ function App() {
         onDragOver={!outputUrl ? onDragOver : undefined}
         onClick={() => !converting && !outputUrl && document.getElementById('file-upload')?.click()}
         className={cn(
-          "z-10 w-full h-[calc(100vh-48px)] border-2 border-dashed rounded-2xl transition-all flex flex-col items-center justify-center gap-8",
+          "z-10 w-full h-[calc(100vh-16px)] sm:h-[calc(100vh-32px)] border-2 border-dashed rounded-2xl transition-all flex flex-col items-center justify-center gap-6 sm:gap-8",
           ready && !converting && !outputUrl ? "border-border hover:border-muted-foreground cursor-pointer hover:bg-accent/30" : "border-border/50",
           (converting || outputUrl) && "cursor-default"
         )}
       >
         {/* Header - hide when done */}
         {!outputUrl && (
-          <div className="text-center space-y-3">
-            <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <div className="text-center space-y-2 sm:space-y-3">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
               HEICS Converter
             </h1>
-            <p className="text-muted-foreground text-lg">Convert animated Live Photos to GIF, APNG, or WebP with transparency</p>
+            <p className="text-muted-foreground text-base sm:text-lg">Convert animated Live Photos to GIF, APNG, or WebP with transparency</p>
           </div>
         )}
 
         {/* Format Selection - hide when done */}
         {!outputUrl && (
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex gap-2">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap gap-2 justify-center">
               {(Object.keys(formatInfo) as OutputFormat[]).map((fmt) => (
                 <button
                   key={fmt}
                   onClick={(e) => { e.stopPropagation(); setOutputFormat(fmt); }}
                   disabled={converting}
                   className={cn(
-                    "px-4 py-2 rounded-lg border transition-all text-sm font-medium",
+                    "px-3 py-2 sm:px-4 rounded-lg border transition-all text-sm font-medium",
                     outputFormat === fmt
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-secondary/50 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
@@ -350,12 +350,12 @@ function App() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 justify-center">
               <button
                 onClick={(e) => { e.stopPropagation(); setScale128(!scale128); }}
                 disabled={converting}
                 className={cn(
-                  "px-3 py-1.5 rounded-md border transition-all text-xs font-medium",
+                  "px-2 py-1.5 sm:px-3 rounded-md border transition-all text-xs font-medium",
                   scale128
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-secondary/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
@@ -367,7 +367,7 @@ function App() {
                 onClick={(e) => { e.stopPropagation(); setFps10(!fps10); }}
                 disabled={converting}
                 className={cn(
-                  "px-3 py-1.5 rounded-md border transition-all text-xs font-medium",
+                  "px-2 py-1.5 sm:px-3 rounded-md border transition-all text-xs font-medium",
                   fps10
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-secondary/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
@@ -381,16 +381,16 @@ function App() {
 
         {/* Status Area */}
         {!ready && (
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+          <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
             <span>Loading converter engine...</span>
           </div>
         )}
 
         {ready && !converting && !outputUrl && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="p-6 rounded-full bg-secondary/50 border border-border">
-              <Upload className="w-12 h-12 text-muted-foreground" />
+          <div className="flex flex-col items-center gap-3 sm:gap-4">
+            <div className="p-4 sm:p-6 rounded-full bg-secondary/50 border border-border">
+              <Upload className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground" />
             </div>
             <div className="text-center">
               <p className="font-medium text-foreground">Drop HEICS file here or click to browse</p>
@@ -400,9 +400,9 @@ function App() {
         )}
 
         {converting && (
-          <div className="flex flex-col items-center gap-4 w-full max-w-md">
-            <div className="flex items-center gap-3 text-foreground">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <div className="flex flex-col items-center gap-3 sm:gap-4 w-full max-w-sm sm:max-w-md">
+            <div className="flex items-center gap-2 sm:gap-3 text-foreground">
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-primary" />
               <span>{progressLabel}</span>
             </div>
             <Progress value={progress} className="h-2 w-full" />
@@ -411,18 +411,18 @@ function App() {
         )}
 
         {outputUrl && !converting && (
-          <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-center gap-3 text-green-600 dark:text-green-400">
-              <CheckCircle2 className="w-6 h-6" />
-              <span className="text-lg font-medium">Conversion Complete!</span>
+          <div className="flex flex-col items-center gap-4 sm:gap-6 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center gap-2 sm:gap-3 text-green-600 dark:text-green-400">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="text-base sm:text-lg font-medium">Conversion Complete!</span>
             </div>
 
-            <div className="relative rounded-xl overflow-hidden border border-border bg-center max-w-md">
+            <div className="relative rounded-xl overflow-hidden border border-border bg-center w-full max-w-sm sm:max-w-md">
               <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,hsl(var(--muted-foreground))_25%,transparent_25%,transparent_75%,hsl(var(--muted-foreground))_75%,hsl(var(--muted-foreground))),linear-gradient(45deg,hsl(var(--muted-foreground))_25%,transparent_25%,transparent_75%,hsl(var(--muted-foreground))_75%,hsl(var(--muted-foreground)))] bg-[length:16px_16px] bg-[position:0_0,8px_8px]"></div>
-              <img src={outputUrl} alt={`Converted ${format.label}`} className="relative z-10 max-w-full max-h-[300px] object-contain" />
+              <img src={outputUrl} alt={`Converted ${format.label}`} className="relative z-10 max-w-full max-h-[200px] sm:max-h-[300px] object-contain" />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button asChild>
                 <a ref={downloadLinkRef} href={outputUrl} download={file?.name.replace(/\.[^/.]+$/, "") + "." + format.ext}>
                   <Download className="w-4 h-4 mr-2" /> Download Again
@@ -436,8 +436,8 @@ function App() {
         )}
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3 text-destructive max-w-md">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 sm:p-4 flex items-center gap-2 sm:gap-3 text-destructive w-full max-w-sm sm:max-w-md">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
             <div>
               <p className="font-medium">Conversion Failed</p>
               <p className="text-sm opacity-80 mt-1">{error}</p>
@@ -446,7 +446,7 @@ function App() {
         )}
         {/* Footer - inside drop zone, hide when done */}
         {!outputUrl && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center">
             {ready ? (
               <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
                 Engine Ready
@@ -454,8 +454,8 @@ function App() {
             ) : (
               <Badge variant="secondary" className="animate-pulse">Loading...</Badge>
             )}
-            <span className="text-muted-foreground/50 text-sm">•</span>
-            <span className="text-muted-foreground text-sm">All processing happens locally in your browser</span>
+            <span className="text-muted-foreground/50 text-sm hidden sm:inline">•</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">All processing happens locally in your browser</span>
           </div>
         )}
 
