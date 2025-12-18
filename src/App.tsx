@@ -24,6 +24,8 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('gif');
+  const [scale128, setScale128] = useState(false);
+  const [fps10, setFps10] = useState(false);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ffmpegRef = useRef<FFmpeg | null>(null);
@@ -63,7 +65,7 @@ function App() {
     loadFFmpeg();
   }, [toast]);
 
-  const handleConvert = useCallback(async (selectedFile: File, format: OutputFormat) => {
+  const handleConvert = useCallback(async (selectedFile: File, format: OutputFormat, shouldScale: boolean, shouldLimitFps: boolean) => {
     if (!selectedFile || !ffmpegRef.current) return;
 
     setConverting(true);
@@ -76,6 +78,11 @@ function App() {
       const inputFileName = 'input.heics';
       const formatConfig = formatInfo[format];
       const outputFileName = `output.${formatConfig.ext}`;
+
+      // Build filter parts
+      const scaleFilterPart = shouldScale ? ",scale='min(128,iw)':min'(128,ih)':force_original_aspect_ratio=decrease" : '';
+      const fpsFilterPart = shouldLimitFps ? ',fps=10' : '';
+      const combinedFilter = `${scaleFilterPart}${fpsFilterPart}`;
 
       // Write file to virtual FS
       setProgressLabel('Loading file...');
@@ -91,7 +98,7 @@ function App() {
         exitCode = await ffmpeg.exec([
           '-i', inputFileName,
           '-filter_complex',
-          '[0:v:2][0:v:3]alphamerge,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse=dither=none',
+          `[0:v:2][0:v:3]alphamerge${combinedFilter},split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse=dither=none`,
           '-gifflags', '+transdiff',
           '-y',
           outputFileName
@@ -101,7 +108,7 @@ function App() {
           exitCode = await ffmpeg.exec([
             '-i', inputFileName,
             '-filter_complex',
-            '[0:v:0][0:v:1]alphamerge,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse=dither=none',
+            `[0:v:0][0:v:1]alphamerge${combinedFilter},split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse=dither=none`,
             '-gifflags', '+transdiff',
             '-y',
             outputFileName
@@ -109,9 +116,12 @@ function App() {
         }
 
         if (exitCode !== 0) {
+          let vfFilter = 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse';
+          if (shouldScale) vfFilter = "scale='min(128,iw)':min'(128,ih)':force_original_aspect_ratio=decrease," + vfFilter;
+          if (shouldLimitFps) vfFilter = 'fps=10,' + vfFilter;
           exitCode = await ffmpeg.exec([
             '-i', inputFileName,
-            '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+            '-vf', vfFilter,
             '-y',
             outputFileName
           ]);
@@ -120,7 +130,7 @@ function App() {
         exitCode = await ffmpeg.exec([
           '-i', inputFileName,
           '-filter_complex',
-          '[0:v:2][0:v:3]alphamerge',
+          `[0:v:2][0:v:3]alphamerge${combinedFilter}`,
           '-f', 'apng',
           '-plays', '0',
           '-y',
@@ -131,7 +141,7 @@ function App() {
           exitCode = await ffmpeg.exec([
             '-i', inputFileName,
             '-filter_complex',
-            '[0:v:0][0:v:1]alphamerge',
+            `[0:v:0][0:v:1]alphamerge${combinedFilter}`,
             '-f', 'apng',
             '-plays', '0',
             '-y',
@@ -140,19 +150,19 @@ function App() {
         }
 
         if (exitCode !== 0) {
-          exitCode = await ffmpeg.exec([
-            '-i', inputFileName,
-            '-f', 'apng',
-            '-plays', '0',
-            '-y',
-            outputFileName
-          ]);
+          const filters: string[] = [];
+          if (shouldLimitFps) filters.push('fps=10');
+          if (shouldScale) filters.push("scale='min(128,iw)':min'(128,ih)':force_original_aspect_ratio=decrease");
+          const args = ['-i', inputFileName];
+          if (filters.length > 0) args.push('-vf', filters.join(','));
+          args.push('-f', 'apng', '-plays', '0', '-y', outputFileName);
+          exitCode = await ffmpeg.exec(args);
         }
       } else if (format === 'webp') {
         exitCode = await ffmpeg.exec([
           '-i', inputFileName,
           '-filter_complex',
-          '[0:v:2][0:v:3]alphamerge',
+          `[0:v:2][0:v:3]alphamerge${combinedFilter}`,
           '-c:v', 'libwebp',
           '-lossless', '1',
           '-loop', '0',
@@ -164,7 +174,7 @@ function App() {
           exitCode = await ffmpeg.exec([
             '-i', inputFileName,
             '-filter_complex',
-            '[0:v:0][0:v:1]alphamerge',
+            `[0:v:0][0:v:1]alphamerge${combinedFilter}`,
             '-c:v', 'libwebp',
             '-lossless', '1',
             '-loop', '0',
@@ -174,14 +184,13 @@ function App() {
         }
 
         if (exitCode !== 0) {
-          exitCode = await ffmpeg.exec([
-            '-i', inputFileName,
-            '-c:v', 'libwebp',
-            '-lossless', '1',
-            '-loop', '0',
-            '-y',
-            outputFileName
-          ]);
+          const filters: string[] = [];
+          if (shouldLimitFps) filters.push('fps=10');
+          if (shouldScale) filters.push("scale='min(128,iw)':min'(128,ih)':force_original_aspect_ratio=decrease");
+          const args = ['-i', inputFileName];
+          if (filters.length > 0) args.push('-vf', filters.join(','));
+          args.push('-c:v', 'libwebp', '-lossless', '1', '-loop', '0', '-y', outputFileName);
+          exitCode = await ffmpeg.exec(args);
         }
       }
 
@@ -255,9 +264,9 @@ function App() {
       setOutputUrl(null);
       setError(null);
       // Auto-start conversion
-      handleConvert(selectedFile, outputFormat);
+      handleConvert(selectedFile, outputFormat, scale128, fps10);
     }
-  }, [ready, converting, outputFormat, handleConvert, toast]);
+  }, [ready, converting, outputFormat, scale128, fps10, handleConvert, toast]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -281,11 +290,11 @@ function App() {
       setOutputUrl(null);
       setError(null);
       // Auto-start conversion
-      handleConvert(selectedFile, outputFormat);
+      handleConvert(selectedFile, outputFormat, scale128, fps10);
     }
     // Reset input
     e.target.value = '';
-  }, [ready, converting, outputFormat, handleConvert, toast]);
+  }, [ready, converting, outputFormat, scale128, fps10, handleConvert, toast]);
 
   const reset = () => {
     setFile(null);
@@ -323,22 +332,50 @@ function App() {
 
         {/* Format Selection - hide when done */}
         {!outputUrl && (
-          <div className="flex gap-2">
-            {(Object.keys(formatInfo) as OutputFormat[]).map((fmt) => (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex gap-2">
+              {(Object.keys(formatInfo) as OutputFormat[]).map((fmt) => (
+                <button
+                  key={fmt}
+                  onClick={(e) => { e.stopPropagation(); setOutputFormat(fmt); }}
+                  disabled={converting}
+                  className={cn(
+                    "px-4 py-2 rounded-lg border transition-all text-sm font-medium",
+                    outputFormat === fmt
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-secondary/50 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {formatInfo[fmt].label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
               <button
-                key={fmt}
-                onClick={(e) => { e.stopPropagation(); setOutputFormat(fmt); }}
+                onClick={(e) => { e.stopPropagation(); setScale128(!scale128); }}
                 disabled={converting}
                 className={cn(
-                  "px-4 py-2 rounded-lg border transition-all text-sm font-medium",
-                  outputFormat === fmt
+                  "px-3 py-1.5 rounded-md border transition-all text-xs font-medium",
+                  scale128
                     ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-secondary/50 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+                    : "border-border bg-secondary/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
                 )}
               >
-                {formatInfo[fmt].label}
+                {scale128 ? "✓ " : ""}128px
               </button>
-            ))}
+              <button
+                onClick={(e) => { e.stopPropagation(); setFps10(!fps10); }}
+                disabled={converting}
+                className={cn(
+                  "px-3 py-1.5 rounded-md border transition-all text-xs font-medium",
+                  fps10
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-secondary/30 text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+                )}
+              >
+                {fps10 ? "✓ " : ""}10fps
+              </button>
+            </div>
           </div>
         )}
 
